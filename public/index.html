@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Projeto 3D</title>
+  <link rel="stylesheet" href="style.css" />
+  <script type="importmap">
+    { "imports": {
+        "three": "/vendor/three/build/three.module.js",
+        "three/addons/": "/vendor/three/examples/jsm/"
+    } }
+  </script>
+</head>
+<body>
+  <div id="lobby">
+    <div class="card">
+      <h1>Projeto 3D</h1>
+      <div class="lobby-grid">
+        <div class="customize">
+          <canvas id="preview"></canvas>
+          <div class="models">
+            <button class="model-btn" data-model="male">👨 Homem</button>
+            <button class="model-btn" data-model="female">👩 Mulher</button>
+          </div>
+          <div id="char-grid" class="char-grid"></div>
+        </div>
+        <div class="join">
+          <label>Seu nome
+            <input id="name" maxlength="16" placeholder="Jogador" autocomplete="off" />
+          </label>
+          <button id="create">Criar sala</button>
+          <div class="sep"><span>ou</span></div>
+          <div class="row">
+            <input id="code" maxlength="6" placeholder="CÓDIGO" autocomplete="off" />
+            <button id="join">Entrar</button>
+          </div>
+          <p id="error"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="hud" hidden>
+    <div class="room">Sala: <strong id="room-code"></strong>
+      <button id="copy" title="Copiar link da sala">Copiar</button>
+    </div>
+    <div id="count"></div>
+    <div id="side-toolbar">
+      <button id="inv-btn" class="side-btn" title="Inventário (I)">🎒<kbd>I</kbd></button>
+      <button id="tomato-btn" class="side-btn" title="Jogar tomate (G)">🍅<kbd>G</kbd></button>
+      <button id="tv-btn" class="side-btn" title="Painel da TV (T)">📺<kbd>T</kbd></button>
+      <button id="cinema-btn" class="side-btn" title="Tela cheia do filme (F)">🎬<kbd>F</kbd></button>
+      <button id="flash-btn" class="side-btn" title="Lanterna (L)">🔦<kbd>L</kbd></button>
+      <button id="mute-btn" class="side-btn" title="Mudo (M)">🔊<kbd>M</kbd></button>
+      <button id="view-btn" class="side-btn" title="1ª/3ª pessoa (V)">👁<kbd>V</kbd></button>
+      <button id="names-btn" class="side-btn" title="Quem está na sala e status da transmissão (Tab)">👥<kbd>Tab</kbd></button>
+      <button id="fancy-btn" class="side-btn" title="3D caprichado: sombras e resolução maior (P) — para computador forte; o vídeo da tela não muda">✨<kbd>P</kbd></button>
+      <button id="moon-btn" class="side-btn" title="Gravidade da lua: pulos altos e queda lenta (K)">🌕<kbd>K</kbd></button>
+    </div>
+    <div id="roles"></div>
+    <div id="player-list" hidden>
+      <strong id="player-list-title"></strong>
+      <ul id="player-list-items"></ul>
+      <div id="share-status" hidden></div>
+    </div>
+    <div id="toast" hidden></div>
+    <button id="tv-unmute" hidden>🔇 Ativar som da TV</button>
+  </div>
+
+  <div id="tv-panel" hidden>
+    <div class="panel-head">
+      <h3>📺 Controle da TV</h3>
+      <button id="tv-cinema">🎬 Tela cheia (F)</button>
+    </div>
+    <section class="room-admin">
+      <div id="roles-line"></div>
+      <div class="row" id="pass-row" hidden>
+        <select id="pass-to" title="Para quem passar o controle"></select>
+        <button id="pass-btn">🎮 Passar controle</button>
+        <button id="take-btn" hidden>👑 Retomar controle</button>
+      </div>
+      <div class="row" id="time-row" hidden>
+        <span>Ambiente da sala:</span>
+        <button id="time-day" data-time="day">☀️ Dia</button>
+        <button id="time-night" data-time="night">🌙 Noite</button>
+      </div>
+    </section>
+    <section class="viewer">
+      <div class="row timebar">
+        <span id="tv-time">0:00</span>
+        <input type="range" id="tv-seek" min="0" max="0" step="1" value="0" title="Arraste para pular (quem tem o controle)" />
+        <span id="tv-duration">0:00</span>
+      </div>
+      <div class="row personal">
+        <button id="vol-mute" title="Mudo (M)">🔊</button>
+        <input type="range" id="vol" min="0" max="100" step="1" value="100" title="Seu volume (só para você)" />
+        <button id="cc-btn" title="Legendas do YouTube (C)">CC Legendas</button>
+      </div>
+      <small>Volume e legendas valem só para você · M mudo · C legendas</small>
+    </section>
+    <p id="tv-lock" hidden></p>
+    <div id="tv-controls">
+    <div class="row controls">
+      <button data-tv="back">⏪ 10s</button>
+      <button data-tv="toggle" id="tv-toggle">▶ Play</button>
+      <button data-tv="fwd">10s ⏩</button>
+    </div>
+    <p id="tv-msg"></p>
+    <div class="row">
+      <input id="tv-url" placeholder="Link do YouTube ou .mp4" autocomplete="off" />
+      <button id="tv-load">Carregar</button>
+    </div>
+    <div class="row share-row">
+      <button id="tv-share" class="share-btn">📡 Transmitir uma aba ou a tela</button>
+      <select id="tv-quality" title="Qualidade da transmissão"></select>
+    </div>
+    </div>
+    <small>Todos na sala assistem sincronizados · T ou Esc para fechar</small>
+  </div>
+
+  <div id="inventory" hidden>
+    <div class="panel-head">
+      <h3>🎒 Inventário</h3>
+      <button id="inv-close" title="Fechar (I ou Esc)">✕</button>
+    </div>
+    <div class="tabs">
+      <button data-tab="sounds" class="active">🔊 Sons</button>
+      <button data-tab="flags">🚩 Bandeiras</button>
+    </div>
+    <section id="tab-sounds" class="inv-tab">
+      <div class="row inv-volume">
+        <span>Volume dos sons</span>
+        <input type="range" id="snd-vol" min="0" max="100" step="1" value="80" title="Só para você" />
+        <button id="snd-stop" title="Parar os sons tocando (só para você)">⏹ Parar</button>
+      </div>
+      <div id="sound-grid" class="sound-grid"></div>
+      <div class="sound-mutes">
+        <button id="snd-mute-all">🔇 Silenciar todos os sons do inventário</button>
+        <strong>Silenciar por pessoa <span>(só para você)</span></strong>
+        <ul id="snd-people"></ul>
+      </div>
+      <small>Clicou, <b>todos na sala ouvem</b>. Para adicionar: coloque arquivos .mp3 na pasta <code>sounds/</code> do servidor.</small>
+    </section>
+    <section id="tab-flags" class="inv-tab" hidden>
+      <div id="flag-grid" class="flag-grid"></div>
+      <small>A bandeira fica na mão esquerda do seu personagem e todos veem. Sentado, ela fica menor para não tapar a tela de quem está atrás.</small>
+    </section>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

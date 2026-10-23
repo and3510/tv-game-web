@@ -1,0 +1,6 @@
+Coloque aqui arquivos de áudio (.mp3, .ogg, .wav ou .m4a).
+
+Eles aparecem na hora no jogo, em Inventário (tecla I) → aba Sons, com o nome do arquivo
+(sem a extensão; "-" e "_" viram espaço). Clicou, todos na sala ouvem.
+
+Não precisa reiniciar o servidor nem refazer a imagem Docker: a pasta é montada no container.

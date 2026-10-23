@@ -1,0 +1,15 @@
+# LiveKit (SFU da transmissão de tela) para o docker compose.
+# A chave da API é gerada pelo serviço "secrets" do compose e lida pelo jogo e pelo LiveKit.
+port: 7880
+key_file: /secret/livekit.keys
+rtc:
+  tcp_port: 7881 # reserva para redes que bloqueiam UDP
+  udp_port: 7882 # todo o vídeo numa porta UDP só (não precisa abrir faixa de portas)
+  use_external_ip: false # rede local: anuncia os IPs da máquina; no servidor/k3s fica true
+room:
+  empty_timeout: 60
+  # Som e vídeo da tela no mesmo grupo: o navegador do espectador sincroniza os dois (sem isso o som
+  # e a imagem tocam cada um no seu ritmo e podem se desencontrar).
+  sync_streams: true
+logging:
+  level: info

@@ -1,0 +1,68 @@
+# docker compose up -d --build   →  https://IP-DA-MÁQUINA (ou http://localhost:3000), sem .env
+# Inclui o LiveKit (SFU) para a transmissão de tela: quem transmite envia uma cópia só e ele distribui.
+services:
+  # Gera uma única vez a chave da API do LiveKit, compartilhada entre o jogo e o LiveKit (fica no volume).
+  secrets:
+    image: alpine:3.20
+    volumes:
+      - secrets:/secret
+    command:
+      - sh
+      - -c
+      - |
+        f=/secret/livekit.keys
+        [ -s $$f ] || echo "API$$(head -c 6 /dev/urandom | od -An -tx1 | tr -d ' \n'): $$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')" > $$f
+        chown 1000:1000 $$f && chmod 600 $$f # o LiveKit recusa chave legível por outros usuários
+
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile # mesmo caminho que a pipeline usa
+    init: true # repassa SIGTERM ao Node (sem isso o docker stop espera 10s e mata com 137)
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      LIVEKIT_KEY_FILE: /secret/livekit.keys
+      LIVEKIT_URL: http://host.docker.internal:7880 # o LiveKit roda na rede do host (abaixo)
+      HTTPS_REDIRECT_PORT: "${HTTPS_PORT:-443}"
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    volumes:
+      - secrets:/secret:ro
+      - ./sounds:/app/sounds:ro # sons do inventário: adicione .mp3 aqui sem refazer a imagem
+    depends_on:
+      secrets:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # Rede do host: assim o LiveKit anuncia os IPs reais da máquina e os outros computadores da rede
+  # mandam o vídeo direto para ele (UDP 7882, ou TCP 7881). Não precisa abrir faixa de portas.
+  livekit:
+    image: livekit/livekit-server:v1.9
+    network_mode: host
+    user: "1000:1000"
+    read_only: true
+    command: ["--config", "/etc/livekit.yaml"]
+    volumes:
+      - secrets:/secret:ro
+      - ./deploy/livekit.yaml:/etc/livekit.yaml:ro
+    depends_on:
+      secrets:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # HTTPS na frente do jogo: sem ele, só quem abre por localhost consegue transmitir a tela.
+  caddy:
+    image: caddy:2.8-alpine
+    ports:
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data # guarda a CA interna: o aviso do navegador não volta a cada reinício
+    depends_on:
+      - app
+    restart: unless-stopped
+
+volumes:
+  secrets:
+  caddy-data:

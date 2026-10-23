@@ -1,0 +1,21 @@
+{
+	# Certificado sob demanda só para o que o jogo autorizar (IPs e localhost); evita abuso.
+	on_demand_tls {
+		ask http://app:3000/tls-ask
+	}
+}
+
+# Rede local: HTTPS com a CA interna do Caddy, para os navegadores permitirem transmitir a tela.
+# Na primeira visita aparece um aviso de certificado: "Avançado → Continuar para 192.168.x.x".
+:443 {
+	tls internal {
+		on_demand
+	}
+	reverse_proxy app:3000
+}
+
+# Servidor na internet com domínio: troque o bloco acima por este (certificado Let's Encrypt automático,
+# sem aviso) e publique também a porta 80 no docker-compose.yml.
+# seujogo.com.br {
+# 	reverse_proxy app:3000
+# }
